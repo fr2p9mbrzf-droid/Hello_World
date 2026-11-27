@@ -36,7 +36,7 @@ function draw(){
   const amount=el('strong',(r.kind==='income'?'+':'−')+fmt(r.amount_yen));amount.className=r.kind==='income'?'bu-positive':'bu-negative';top.append(desc,amount);card.append(top);
   if(r.note)card.append(el('p',r.note));
   const actions=el('div');actions.className='actions';
-  if(approved){const b=el('button','編集');b.className='secondary';b.onclick=()=>{if(busy)return;editing=r.id;$('bu-date').value=r.record_date;$('bu-kind').value=r.kind;options(r.category);$('bu-amount').value=r.amount_yen;$('bu-note').value=r.note;$('bu-form-title').textContent='記録を編集';form.scrollIntoView({behavior:'smooth'})};actions.append(b)}
+  if(approved){const b=el('button','編集');b.className='secondary';b.onclick=()=>{if(busy)return;form.dispatchEvent(new Event('receipt-clear'));editing=r.id;$('bu-date').value=r.record_date;$('bu-kind').value=r.kind;options(r.category);$('bu-amount').value=r.amount_yen;$('bu-note').value=r.note;$('bu-form-title').textContent='記録を編集';form.scrollIntoView({behavior:'smooth'})};actions.append(b)}
   const del=el('button','削除');del.className='secondary';del.onclick=async()=>{if(busy||!user||!confirm('この記録を削除しますか？'))return;const uid=user.id;setBusy(true);try{const res=await client.from('budget_records').delete().eq('id',r.id).eq('owner_id',uid).select('id');if(res.error)throw res.error;if(!res.data?.length)throw Error('削除できませんでした。');if(user?.id!==uid||!active())return;if(editing===r.id)reset();await load();say('削除しました。')}catch(e){if(active()&&user?.id===uid)say(e.message)}finally{setBusy(false)}};actions.append(del);card.append(actions);list.append(card)
  }
 }
@@ -65,7 +65,7 @@ async function sync(){
  }catch(e){if(active())say('家計簿を読み込めません: '+e.message+'（統合SQLの設定をご確認ください）')}
 }
 form.onsubmit=async e=>{
- e.preventDefault();if(busy||!approved||!user)return;
+ e.preventDefault();if(busy||!approved||!user)return;if(!$('rc-progress').hidden){say('レシートの読み取りが終了してから保存してください。');return}if(!$('rc-results').hidden){say('レシートの結果を確認し、家計簿へ反映してから保存してください。');return}
  const uid=user.id,amount=Number($('bu-amount').value),kind=$('bu-kind').value,category=$('bu-category').value,date=$('bu-date').value;
  if(!date||!category||!Number.isInteger(amount)||amount<1||amount>1000000000){say('日付・カテゴリ・金額を確認してください。');return}
  const data={owner_id:uid,record_date:date,kind,category,amount_yen:amount,note:$('bu-note').value};
