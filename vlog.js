@@ -45,18 +45,16 @@ async function sync(){
  const result=await client.auth.getUser();
  user=result.data?.user||null;owner=false;
  if(user){const check=await client.rpc('is_vlog_owner');owner=check.data===true&&!check.error}
- login.hidden=owner;logout.hidden=!user;form.hidden=!owner;
+ login.hidden=!!user;logout.hidden=!user;form.hidden=!owner;
  if(user&&!owner)say('このアカウントには投稿権限がありません。');
  await refresh();
 }
 async function init(){
  if(!config.url||!config.publishableKey){$('vlog-setup-notice').hidden=false;grid.append(node('p','クラウド接続後、ここに動画・写真が表示されます。'));return}
  try{
- const url=new URL(config.url);if(url.protocol!=='https:')throw new Error('HTTPSのプロジェクトURLが必要です。');
- const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
- client=createClient(url.origin,config.publishableKey);login.hidden=false;
+ client=await window.MY_LIFE_CLIENT_PROMISE;login.hidden=false;
  await sync();
- client.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'){owner=false;user=null;form.hidden=true;login.hidden=false;logout.hidden=true;generation++;clean();setTimeout(()=>refresh().catch(e=>say(e.message)),0)}});
+ client.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'||event==='USER_UPDATED'){owner=false;user=null;form.hidden=true;login.hidden=false;logout.hidden=true;generation++;clean();setTimeout(()=>sync().catch(e=>say(e.message)),0)}});
  }catch(e){say('クラウド接続に失敗: '+e.message)}
 }
 login.onsubmit=async e=>{e.preventDefault();const b=login.querySelector('button');b.disabled=true;say('ログイン中…');try{const {error}=await client.auth.signInWithPassword({email:$('vlog-email').value,password:$('vlog-password').value});if(error)throw error;login.reset();say('ログインしました。');await sync()}catch(e){say('ログインできません: '+e.message)}finally{b.disabled=false}};
