@@ -1,3 +1,2 @@
-// Set only the project's public URL and publishable key (or legacy anon key).
-// NEVER put a secret key, service_role key, email password or database password here.
-window.MY_LIFE_VIDEO_CONFIG = {url:"",publishableKey:""};
+// Public browser configuration only. Never add secret or service_role keys.
+window.MY_LIFE_VIDEO_CONFIG = {url:"https://vwiojnuwxsmghydnpwpj.supabase.co",publishableKey:"sb_publishable_bD5Kq2Qv9KHtOputCYKFyQ_fi56ogEP"};
