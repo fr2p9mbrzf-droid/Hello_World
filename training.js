@@ -8,9 +8,34 @@ const active=()=>location.hash==='#training';
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 const fmt=n=>Number(n).toLocaleString('ja-JP',{maximumFractionDigits:2});
 const fields=['workout_date','exercise','weight_kg','reps','sets','note'];
-function reset(){editing=null;form.reset();$('tr-workout_date').value=today();$('tr-form-title').textContent='トレーニングを記録';}
+const catalog={"脚":["スクワット","ブルガリアンスクワット"],"腕":[],"肩":["サイドレイズ(ダンベル)","ショルダープレス(スミス)","ショルダープレス(マシン)","リアデルト"],"背中":["インクラインレバーロウ","懸垂","シーテッドロウ","デッドリフト","ラットプルダウン","ラットプルダウンEX","ロングプル"],"胸":["チェスト/ショルダープレス","チェストプレス","ディップス","ペックフライ","ベンチプレス"]};
+const bodySelect=$('tr-bodypart'), exerciseSelect=$('tr-exercise');
+let legacyExercise='';
+function option(value,label=value){const o=el('option',label);o.value=value;return o}
+function fillBody(){
+ bodySelect.replaceChildren(option('','部位を選択'));
+ for(const part of Object.keys(catalog))bodySelect.append(option(part,part==='腕'?'腕（準備中）':part));
+ if(legacyExercise)bodySelect.append(option('legacy','過去の種目'));
+}
+function fillExercises(value=''){
+ const part=bodySelect.value;
+ const items=part==='legacy'?(legacyExercise?[legacyExercise]:[]):(catalog[part]||[]);
+ exerciseSelect.replaceChildren(option('',part==='腕'?'腕の種目は準備中':part?'種目を選択':'先に部位を選択'));
+ for(const name of items)exerciseSelect.append(option(name));
+ if(items.includes(value))exerciseSelect.value=value;
+ exerciseSelect.disabled=busy||items.length===0;
+ $('tr-exercise-help').textContent=part==='腕'?'腕の種目は後から追加します。':part==='legacy'?'既存の種目名をそのまま保持しています。':'部位に対応する種目を選択してください。';
+}
+function restoreExercise(name){
+ legacyExercise='';const part=Object.keys(catalog).find(key=>catalog[key].includes(name));
+ if(!part&&name)legacyExercise=name;
+ fillBody();bodySelect.value=part||(legacyExercise?'legacy':'');fillExercises(name);
+}
+bodySelect.onchange=()=>fillExercises();
+
+function reset(){editing=null;form.reset();restoreExercise('');$('tr-workout_date').value=today();$('tr-form-title').textContent='トレーニングを記録';}
 function clear(){generation++;user=null;approved=false;rows=[];editing=null;reset();form.hidden=true;$('tr-controls').hidden=true;$('tr-export').hidden=true;list.replaceChildren();$('tr-account').textContent='';$('tr-graph').replaceChildren();$('tr-days').textContent='—';$('tr-sets-total').textContent='—';$('tr-volume').textContent='—';}
-function setBusy(value){busy=value;form.querySelectorAll('input,textarea,button').forEach(e=>e.disabled=value);$('tr-refresh').disabled=value;$('tr-month').disabled=value;$('tr-filter').disabled=value;$('tr-export').disabled=value;}
+function setBusy(value){busy=value;form.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=value);if(!value)fillExercises(exerciseSelect.value);$('tr-refresh').disabled=value;$('tr-month').disabled=value;$('tr-filter').disabled=value;$('tr-export').disabled=value;}
 function filtered(){const q=$('tr-filter').value.trim().toLowerCase();return rows.filter(x=>!q||x.exercise.toLowerCase().includes(q))}
 function draw(){
  const data=filtered();list.replaceChildren();const days=new Set(data.map(r=>r.workout_date)).size;
@@ -27,7 +52,7 @@ function draw(){
   const card=el('article');card.className='panel tr-record';card.append(el('strong',r.exercise),el('p',(r.weight_kg===null?'自重':fmt(r.weight_kg)+' kg')+' × '+r.reps+'回 × '+r.sets+'セット'));
   if(r.note)card.append(el('p',r.note));
   const actions=el('div');actions.className='actions';
-  if(approved){const edit=el('button','編集');edit.className='secondary';edit.onclick=()=>{if(busy)return;editing=r.id;for(const k of fields)$('tr-'+k).value=r[k]??'';$('tr-form-title').textContent='記録を編集';form.scrollIntoView({behavior:'smooth'})};actions.append(edit)}
+  if(approved){const edit=el('button','編集');edit.className='secondary';edit.onclick=()=>{if(busy)return;editing=r.id;for(const k of fields)if(k!=='exercise')$('tr-'+k).value=r[k]??'';restoreExercise(r.exercise);$('tr-form-title').textContent='記録を編集';form.scrollIntoView({behavior:'smooth'})};actions.append(edit)}
   const del=el('button','削除');del.className='secondary';del.onclick=async()=>{if(busy||!user||!confirm('このトレーニング記録を削除しますか？'))return;const uid=user.id;setBusy(true);try{const result=await client.from('training_records').delete().eq('id',r.id).eq('owner_id',uid).select('id');if(result.error)throw result.error;if(!result.data?.length)throw Error('削除できませんでした。');if(user?.id!==uid)return;if(editing===r.id)reset();await load();say('記録を削除しました。')}catch(e){say(e.message)}finally{setBusy(false)}};actions.append(del);card.append(actions);list.append(card)
  }
 }
@@ -61,7 +86,7 @@ form.onsubmit=async e=>{
  e.preventDefault();if(busy||!user||!approved)return;const uid=user.id;
  const values={owner_id:uid};for(const k of fields)values[k]=$('tr-'+k).value;
  values.exercise=values.exercise.trim();values.weight_kg=values.weight_kg===''?null:Number(values.weight_kg);values.reps=Number(values.reps);values.sets=Number(values.sets);
- if(!values.exercise||!values.workout_date||!Number.isInteger(values.reps)||!Number.isInteger(values.sets)){say('種目・日付・回数・セット数を確認してください。');return}
+ if(!values.exercise||!(bodySelect.value==='legacy'?editing&&values.exercise===legacyExercise:(catalog[bodySelect.value]||[]).includes(values.exercise))||!values.workout_date||!Number.isInteger(values.reps)||!Number.isInteger(values.sets)){say('種目・日付・回数・セット数を確認してください。');return}
  setBusy(true);try{const r=editing?await client.from('training_records').update(values).eq('id',editing).eq('owner_id',uid).select('id'):await client.from('training_records').insert(values).select('id');
  if(r.error)throw r.error;if(!r.data?.length)throw Error('保存権限がありません。');if(user?.id!==uid)return;$('tr-month').value=values.workout_date.slice(0,7);reset();await load();say('トレーニング記録を保存しました。');
  }catch(e){say('保存できません: '+e.message)}finally{setBusy(false)}
