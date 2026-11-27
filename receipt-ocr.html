@@ -1,0 +1,26 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src blob:; connect-src https://cdn.jsdelivr.net; img-src blob: data:; style-src 'none'; base-uri 'none'; form-action 'none'"><title>Receipt OCR worker</title></head><body>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" crossorigin="anonymous"></script>
+<script>
+'use strict';
+const origin=new URL(location.href).origin;
+const send=(kind,data={})=>parent.postMessage({type:'my-life-receipt',kind,...data},origin);
+let started=false;
+window.addEventListener('message',async e=>{
+ if(e.source!==parent||e.origin!==origin||e.data?.type!=='my-life-receipt-scan'||started||!(e.data.image instanceof ArrayBuffer))return;
+ started=true;let worker;
+ try{
+  if(!window.Tesseract)throw Error('OCRライブラリを読み込めませんでした。');
+  worker=await Tesseract.createWorker(['jpn','eng'],1,{
+   workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+   corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+   cacheMethod:'none',
+   logger:m=>send('progress',{status:m.status,progress:m.progress})
+  });
+  await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  const result=await worker.recognize(new Uint8Array(e.data.image));
+  send('result',{text:result.data.text,confidence:result.data.confidence});
+ }catch(err){send('error',{message:String(err?.message||err).slice(0,300)})}
+ finally{if(worker)try{await worker.terminate()}catch(_){}}
+});
+send('ready');
+</script></body></html>
