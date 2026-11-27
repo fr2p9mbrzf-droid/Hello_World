@@ -4,10 +4,11 @@ const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
 const say=t=>{$('j-status').textContent=t};
 const fields=['entry_date','mood','title','body','good','learn','tomorrow'];
+let calendarMonth='',calendarDay='';
 let client,user=null,member=null,admin=false,selected=null,editing=null,syncGen=0,roomGen=0,busy=false,rows=[];
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 function reset(){editing=null;$('j-entry').reset();$('j-entry_date').value=today();$('j-form-title').textContent='新しい日記';}
-function clear(){roomGen++;rows=[];selected=null;member=null;admin=false;editing=null;reset();$('j-archive').replaceChildren();$('j-rooms').replaceChildren();$('j-room-title').textContent='日記の部屋';$('j-account').textContent='';$('j-request').hidden=true;$('j-entry').hidden=true;$('j-admin').hidden=true;$('j-members').replaceChildren();$('j-rename').hidden=true;$('j-import').hidden=true;$('j-export').hidden=true;$('j-logout').hidden=true;$('j-login').hidden=false;$('j-signup').hidden=true;$('j-signup').reset();$('j-login').reset();$('j-search').value='';}
+function clear(){calendarDay='';calendarMonth='';$('j-calendar').hidden=true;$('j-cal-grid').replaceChildren();roomGen++;rows=[];selected=null;member=null;admin=false;editing=null;reset();$('j-archive').replaceChildren();$('j-rooms').replaceChildren();$('j-room-title').textContent='日記の部屋';$('j-account').textContent='';$('j-request').hidden=true;$('j-entry').hidden=true;$('j-admin').hidden=true;$('j-members').replaceChildren();$('j-rename').hidden=true;$('j-import').hidden=true;$('j-export').hidden=true;$('j-logout').hidden=true;$('j-login').hidden=false;$('j-signup').hidden=true;$('j-signup').reset();$('j-login').reset();$('j-search').value='';}
 const statusName=s=>({pending:'承認待ち',approved:'承認済み',rejected:'未承認',revoked:'承認取り消し'})[s]||s;
 const button=(text,fn,secondary=true)=>{const b=el('button',text);b.type='button';if(secondary)b.className='secondary';b.onclick=fn;return b};
 const busySet=v=>{busy=v;$('j-entry').querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=v);$('j-logout').disabled=v;$('j-import').disabled=v};
@@ -46,25 +47,38 @@ async function sync(){
  }
  const target=rooms.find(x=>x.user_id===selected?.user_id)||rooms.find(x=>x.user_id===user?.id)||rooms[0];
  if(target){const same=selected?.user_id===target.user_id;await choose(target,!same)}
- else{selected=null;roomGen++;rows=[];$('j-archive').replaceChildren();$('j-room-title').textContent='日記の部屋';}
+ else{selected=null;roomGen++;rows=[];$('j-calendar').hidden=true;$('j-cal-grid').replaceChildren();$('j-archive').replaceChildren();$('j-room-title').textContent='日記の部屋';}
 }
 async function choose(room,clearForm=true){
  if(busy&&clearForm)return;
  selected=room;const gen=++roomGen;
- if(clearForm){reset();$('j-search').value=''}
+ if(clearForm){reset();$('j-search').value='';calendarDay='';calendarMonth=''}
  $('j-room-title').textContent=room.display_name+'の日記';
  $('j-entry').hidden=!(user?.id===room.user_id&&member?.status==='approved');$('j-export').hidden=user?.id!==room.user_id;
  $('j-rooms').querySelectorAll('button').forEach(b=>b.classList.toggle('j-selected',b.textContent===room.display_name+'の日記'+(room.user_id===user?.id?'（自分）':'')));
- rows=[];$('j-archive').replaceChildren(el('p','読み込み中…'));
+ rows=[];$('j-calendar').hidden=true;$('j-cal-grid').replaceChildren();$('j-archive').replaceChildren(el('p','読み込み中…'));
  const {data,error}=await client.from('journal_entries').select('id,owner_id,entry_date,mood,title,body,good,learn,tomorrow,published,created_at').eq('owner_id',room.user_id).order('entry_date',{ascending:false}).order('created_at',{ascending:false});
  if(gen!==roomGen)return;
  if(error){$('j-archive').replaceChildren(el('p','日記を取得できません: '+error.message));return}
- rows=data||[];draw();
+ rows=data||[];if(!calendarMonth)calendarMonth=today().slice(0,7);$('j-calendar').hidden=false;draw();
 }
+function renderCalendar(){
+ if(!calendarMonth)return;
+ const [year,month]=calendarMonth.split('-').map(Number),start=new Date(year,month-1,1),count=new Date(year,month,0).getDate();
+ $('j-cal-label').textContent=year+'年 '+month+'月';const grid=$('j-cal-grid');grid.replaceChildren();
+ for(const day of ['日','月','火','水','木','金','土'])grid.append(el('small',day));
+ for(let i=0;i<start.getDay();i++)grid.append(el('span',''));
+ const counts=new Map();for(const r of rows)counts.set(r.entry_date,(counts.get(r.entry_date)||0)+1);
+ for(let n=1;n<=count;n++){const date=calendarMonth+'-'+String(n).padStart(2,'0');const total=counts.get(date)||0;const b=button(String(n),()=>{calendarDay=calendarDay===date?'':date;draw()});b.className='j-cal-day'+(total?' has-entry':'')+(calendarDay===date?' is-selected':'');b.setAttribute('aria-label',date+' '+total+'件');if(total)b.append(el('small',total+'件'));grid.append(b)}
+ $('j-cal-clear').hidden=!calendarDay;
+}
+function moveCalendar(delta){if(!calendarMonth)calendarMonth=today().slice(0,7);const [y,m]=calendarMonth.split('-').map(Number);const d=new Date(y,m-1+delta,1);calendarMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');calendarDay='';draw()}
+$('j-cal-prev').onclick=()=>moveCalendar(-1);$('j-cal-next').onclick=()=>moveCalendar(1);$('j-cal-clear').onclick=()=>{calendarDay='';draw()};
 function draw(){
+ renderCalendar();
  const out=$('j-archive');out.replaceChildren();
  const q=$('j-search').value.toLowerCase();
- const visible=rows.filter(x=>fields.some(k=>String(x[k]||'').toLowerCase().includes(q)));
+ const visible=rows.filter(x=>(!calendarDay||x.entry_date===calendarDay)&&fields.some(k=>String(x[k]||'').toLowerCase().includes(q)));
  if(!visible.length){out.append(el('p','表示できる日記はありません。'));return}
  for(const e of visible){
   const mine=e.owner_id===user?.id;
