@@ -17,7 +17,7 @@ function options(value=''){
  select.value=value;
 }
 function reset(){editing=null;form.reset();$('bu-date').value=today();$('bu-kind').value='expense';options();$('bu-form-title').textContent='新しい記録';}
-function clear(){gen++;user=null;approved=false;rows=[];reset();form.hidden=true;$('bu-data').hidden=true;list.replaceChildren();$('bu-categories').replaceChildren();$('bu-account').textContent='';for(const id of ['bu-income','bu-expense','bu-balance'])$(id).textContent='—';}
+function clear(){gen++;user=null;approved=false;rows=[];reset();form.hidden=true;$('bu-data').hidden=true;$('bu-history').hidden=true;list.replaceChildren();$('bu-categories').replaceChildren();$('bu-account').textContent='';for(const id of ['bu-income','bu-expense','bu-balance'])$(id).textContent='—';}
 function setBusy(v){busy=v;form.querySelectorAll('input,select,textarea,button').forEach(e=>e.disabled=v);for(const id of ['bu-month','bu-prev','bu-next','bu-refresh','bu-export','bu-filter'])$(id).disabled=v;}
 function draw(){
  const income=rows.filter(r=>r.kind==='income').reduce((a,r)=>a+r.amount_yen,0),expense=rows.filter(r=>r.kind==='expense').reduce((a,r)=>a+r.amount_yen,0);
@@ -59,7 +59,7 @@ async function sync(){
   if(u?.id!==user?.id){clear();user=u}
   if(!u){clear();$('bu-account').textContent='ログインして家計簿を使う';say('JOURNALからログインしてください。');return}
   const current=++gen;const a=await client.rpc('journal_is_approved',{p_user:u.id});if(current!==gen||!active()||user?.id!==u.id)return;
-  if(a.error)throw a.error;approved=a.data===true;form.hidden=!approved;$('bu-data').hidden=false;
+  if(a.error)throw a.error;approved=a.data===true;form.hidden=!approved;$('bu-data').hidden=false;$('bu-history').hidden=false;
   $('bu-account').textContent=approved?'自分専用の家計簿':'記録の追加にはメンバー承認が必要です。';
   await load();if(active()&&user?.id===u.id)say('記録は非公開です。');
  }catch(e){if(active())say('家計簿を読み込めません: '+e.message+'（統合SQLの設定をご確認ください）')}
