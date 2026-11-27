@@ -11,22 +11,31 @@ async function refresh(){
  const current=++generation;clean();
  const {data,error}=await client.from('vlog_videos').select('id,path,title,description,published,created_at').order('created_at',{ascending:false});
  if(current!==generation)return;
- if(error){say('動画一覧を取得できません: '+error.message);return}
- if(!data.length){grid.append(node('p','まだ動画がありません。'));return}
+ if(error){say('投稿一覧を取得できません: '+error.message);return}
+ if(!data.length){grid.append(node('p','まだ動画・写真がありません。'));return}
  for(const item of data){
   const card=node('article');card.className='panel';
-  card.append(node('small',new Date(item.created_at).toLocaleDateString('ja-JP')+(owner?(item.published?' ・ 公開中':' ・ 非公開'):'')),node('h2',item.title),node('p',item.description));
-  const play=node('button','▶ 動画を再生');play.type='button';
+  const isImage=/\.(jpe?g|png|webp|gif)$/i.test(item.path);
+  card.append(node('small',new Date(item.created_at).toLocaleDateString('ja-JP')+(isImage?' ・ 写真':' ・ 動画')+(owner?(item.published?' ・ 公開中':' ・ 非公開'):'')),node('h2',item.title),node('p',item.description));
+  const play=node('button',isImage?'写真を表示':'▶ 動画を再生');play.type='button';
   play.onclick=async()=>{play.disabled=true;try{
    const {data,error}=await client.storage.from('vlog-videos').createSignedUrl(item.path,3600);if(error)throw error;
-   if(current!==generation)return;const v=node('video');v.controls=true;v.playsInline=true;v.preload='metadata';v.style.width='100%';v.src=data.signedUrl;play.replaceWith(v);
-  }catch(e){say('再生リンクの取得に失敗: '+e.message);play.disabled=false}};
+   if(current!==generation)return;
+   if(isImage){
+    const img=node('img');img.alt=item.title;img.loading='lazy';img.decoding='async';img.className='vlog-photo';img.referrerPolicy='no-referrer';img.src=data.signedUrl;
+    img.onerror=()=>{if(current===generation){say('写真を表示できません。');img.replaceWith(play);play.disabled=false}};
+    play.replaceWith(img);
+   }else{
+    const v=node('video');v.controls=true;v.playsInline=true;v.preload='metadata';v.style.width='100%';v.src=data.signedUrl;play.replaceWith(v);
+   }
+  }catch(e){say('表示リンクの取得に失敗: '+e.message);play.disabled=false}};
   card.append(play);
+  if(isImage)play.click();
   if(owner){const actions=node('div');actions.className='actions';actions.style.marginTop='12px';
    const toggle=node('button',item.published?'非公開にする':'公開する');toggle.className='secondary';toggle.dataset.write='true';
-   toggle.onclick=async()=>{if(busy)return;if(!item.published&&!confirm('この動画をインターネット上の誰でも閲覧できる状態にしますか？'))return;setBusy(true);try{const {error}=await client.from('vlog_videos').update({published:!item.published}).eq('id',item.id);if(error)throw error;say(item.published?'非公開に変更しました。発行済み再生リンクは最大1時間有効です。':'公開しました。');await refresh()}catch(e){say(e.message)}finally{setBusy(false)}};
+   toggle.onclick=async()=>{if(busy)return;if(!item.published&&!confirm('この投稿をインターネット上の誰でも閲覧できる状態にしますか？'))return;setBusy(true);try{const {error}=await client.from('vlog_videos').update({published:!item.published}).eq('id',item.id);if(error)throw error;say(item.published?'非公開に変更しました。発行済みの表示リンクは最大1時間有効です。':'公開しました。');await refresh()}catch(e){say(e.message)}finally{setBusy(false)}};
    const del=node('button','削除');del.className='secondary';del.dataset.write='true';
-   del.onclick=async()=>{if(busy||!confirm('動画をクラウドから完全に削除しますか？'))return;setBusy(true);try{const {error}=await client.from('vlog_videos').update({published:false}).eq('id',item.id);if(error)throw error;const removed=await client.storage.from('vlog-videos').remove([item.path]);if(removed.error)throw removed.error;const result=await client.from('vlog_videos').delete().eq('id',item.id);if(result.error)throw result.error;say('動画を削除しました。');await refresh()}catch(e){say('削除できませんでした: '+e.message);await refresh()}finally{setBusy(false)}};
+   del.onclick=async()=>{if(busy||!confirm('この投稿のファイルをクラウドから完全に削除しますか？'))return;setBusy(true);try{const {error}=await client.from('vlog_videos').update({published:false}).eq('id',item.id);if(error)throw error;const removed=await client.storage.from('vlog-videos').remove([item.path]);if(removed.error)throw removed.error;const result=await client.from('vlog_videos').delete().eq('id',item.id);if(result.error)throw result.error;say('投稿を削除しました。');await refresh()}catch(e){say('削除できませんでした: '+e.message);await refresh()}finally{setBusy(false)}};
    actions.append(toggle,del);card.append(actions);
   }
   grid.append(card);
@@ -41,7 +50,7 @@ async function sync(){
  await refresh();
 }
 async function init(){
- if(!config.url||!config.publishableKey){$('vlog-setup-notice').hidden=false;grid.append(node('p','クラウド接続後、ここに動画が表示されます。'));return}
+ if(!config.url||!config.publishableKey){$('vlog-setup-notice').hidden=false;grid.append(node('p','クラウド接続後、ここに動画・写真が表示されます。'));return}
  try{
  const url=new URL(config.url);if(url.protocol!=='https:')throw new Error('HTTPSのプロジェクトURLが必要です。');
  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
@@ -53,9 +62,9 @@ async function init(){
 login.onsubmit=async e=>{e.preventDefault();const b=login.querySelector('button');b.disabled=true;say('ログイン中…');try{const {error}=await client.auth.signInWithPassword({email:$('vlog-email').value,password:$('vlog-password').value});if(error)throw error;login.reset();say('ログインしました。');await sync()}catch(e){say('ログインできません: '+e.message)}finally{b.disabled=false}};
 logout.onclick=async()=>{if(busy)return;try{const {error}=await client.auth.signOut();if(error)throw error;say('ログアウトしました。');await sync()}catch(e){say(e.message)}};
 form.onsubmit=async e=>{e.preventDefault();if(!owner||!user||busy)return;const f=$('vlog-file').files[0];const title=$('vlog-title').value.trim();const description=$('vlog-description').value.trim();
- if(!f||!title){say('動画ファイルとタイトルを入力してください。');return}
- const ext={'video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'}[f.type];
- if(!ext||f.size>50000000||f.size===0){say('MP4 / WebM / MOV の50MB以下の動画を選択してください。');return}
+ if(!f||!title){say('動画または画像ファイルとタイトルを入力してください。');return}
+ const ext={'video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov','image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'}[f.type];
+ if(!ext||f.size>50000000||f.size===0){say('MP4 / WebM / MOV / JPEG / PNG / WebP / GIF の50MB以下のファイルを選択してください。');return}
  const path=user.id+'/'+crypto.randomUUID()+'.'+ext;setBusy(true);say('アップロード中…画面を閉じないでください。');let uploaded=false;
  try{
   const up=await client.storage.from('vlog-videos').upload(path,f,{contentType:f.type,upsert:false});if(up.error)throw up.error;uploaded=true;
