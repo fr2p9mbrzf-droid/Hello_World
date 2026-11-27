@@ -31,9 +31,33 @@ function restoreExercise(name){
  if(!part&&name)legacyExercise=name;
  fillBody();bodySelect.value=part||(legacyExercise?'legacy':'');fillExercises(name);
 }
-bodySelect.onchange=()=>fillExercises();
+let analysisGen=0;
+function clearAnalysis(){analysisGen++;$('tr-analysis').hidden=true;$('tr-previous').textContent='';$('tr-trend').replaceChildren()}
+async function analyze(){
+ const run=++analysisGen,uid=user?.id,name=exerciseSelect.value;
+ $('tr-analysis').hidden=!uid||!name||!active();$('tr-previous').textContent='';$('tr-trend').replaceChildren();
+ if(!uid||!name||!active())return;
+ try{
+  const r=await client.from('training_records').select('id,workout_date,weight_kg,reps,sets,created_at').eq('owner_id',uid).eq('exercise',name).order('workout_date',{ascending:false}).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(300);
+  if(run!==analysisGen||uid!==user?.id||!active())return;if(r.error)throw r.error;
+  const data=r.data||[],prev=data[0];$('tr-previous').textContent=prev?'最新の記録：'+prev.workout_date+' ／ '+(prev.weight_kg===null?'自重':fmt(prev.weight_kg)+' kg')+' × '+prev.reps+'回 × '+prev.sets+'セット':'この種目の過去の記録はありません。';
+  const daily=new Map();for(const x of data){if(x.weight_kg!==null)daily.set(x.workout_date,Math.max(daily.get(x.workout_date)||0,Number(x.weight_kg)))}
+  const dates=[...daily].sort((a,b)=>a[0].localeCompare(b[0]));if(!dates.length)return;
+  const max=Math.max(...dates.map(x=>x[1]));const values=dates.slice(-15);const trend=$('tr-trend');trend.append(el('p','取得した直近最大300件の最高重量：'+fmt(max)+' kg'));
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 320 156');svg.setAttribute('role','img');svg.setAttribute('aria-label','直近15日の最高重量推移');
+  function shape(tag,attrs){const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));svg.append(n);return n}
+  const coords=values.map(([date,w],i)=>[values.length===1?165:32+i*274/(values.length-1),116-(max?90*w/max:0)]);
+  for(const y of [26,71,116])shape('line',{x1:30,x2:306,y1:y,y2:y,stroke:'#dedfd7'});
+  shape('polyline',{points:coords.map(x=>x.join(',')).join(' '),fill:'none',stroke:'#405640','stroke-width':2.4});
+  coords.forEach(([x,y],i)=>{const c=shape('circle',{cx:x,cy:y,r:3.5,fill:'#405640'});const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=values[i][0]+' '+fmt(values[i][1])+' kg';c.append(title)});
+  for(const [x,y,label] of [[3,28,fmt(max)],[3,118,'0'],[32,142,values[0][0].slice(5)],[270,142,values.at(-1)[0].slice(5)]])shape('text',{x,y,'font-size':10,fill:'#687465'}).textContent=label;
+  trend.append(svg);trend.append(el('small','直近15記録日・日ごとの最高重量（kg）'));
+ }catch(e){if(run===analysisGen)$('tr-previous').textContent='過去の記録を取得できません：'+e.message}
+}
+bodySelect.onchange=()=>{fillExercises();clearAnalysis()};
+exerciseSelect.onchange=analyze;
 
-function reset(){editing=null;form.reset();restoreExercise('');$('tr-workout_date').value=today();$('tr-form-title').textContent='トレーニングを記録';}
+function reset(){editing=null;form.reset();restoreExercise('');clearAnalysis();$('tr-workout_date').value=today();$('tr-form-title').textContent='トレーニングを記録';}
 function clear(){generation++;user=null;approved=false;rows=[];editing=null;reset();form.hidden=true;$('tr-controls').hidden=true;$('tr-export').hidden=true;list.replaceChildren();$('tr-account').textContent='';$('tr-graph').replaceChildren();$('tr-days').textContent='—';$('tr-sets-total').textContent='—';$('tr-volume').textContent='—';}
 function setBusy(value){busy=value;form.querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=value);if(!value)fillExercises(exerciseSelect.value);$('tr-refresh').disabled=value;$('tr-month').disabled=value;$('tr-filter').disabled=value;$('tr-export').disabled=value;}
 function filtered(){const q=$('tr-filter').value.trim().toLowerCase();return rows.filter(x=>!q||x.exercise.toLowerCase().includes(q))}
@@ -52,7 +76,7 @@ function draw(){
   const card=el('article');card.className='panel tr-record';card.append(el('strong',r.exercise),el('p',(r.weight_kg===null?'自重':fmt(r.weight_kg)+' kg')+' × '+r.reps+'回 × '+r.sets+'セット'));
   if(r.note)card.append(el('p',r.note));
   const actions=el('div');actions.className='actions';
-  if(approved){const edit=el('button','編集');edit.className='secondary';edit.onclick=()=>{if(busy)return;editing=r.id;for(const k of fields)if(k!=='exercise')$('tr-'+k).value=r[k]??'';restoreExercise(r.exercise);$('tr-form-title').textContent='記録を編集';form.scrollIntoView({behavior:'smooth'})};actions.append(edit)}
+  if(approved){const edit=el('button','編集');edit.className='secondary';edit.onclick=()=>{if(busy)return;editing=r.id;for(const k of fields)if(k!=='exercise')$('tr-'+k).value=r[k]??'';restoreExercise(r.exercise);analyze();$('tr-form-title').textContent='記録を編集';form.scrollIntoView({behavior:'smooth'})};actions.append(edit)}
   const del=el('button','削除');del.className='secondary';del.onclick=async()=>{if(busy||!user||!confirm('このトレーニング記録を削除しますか？'))return;const uid=user.id;setBusy(true);try{const result=await client.from('training_records').delete().eq('id',r.id).eq('owner_id',uid).select('id');if(result.error)throw result.error;if(!result.data?.length)throw Error('削除できませんでした。');if(user?.id!==uid)return;if(editing===r.id)reset();await load();say('記録を削除しました。')}catch(e){say(e.message)}finally{setBusy(false)}};actions.append(del);card.append(actions);list.append(card)
  }
 }
