@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MY LIFE — Vlog & Journal</title><style>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="my-life-version" content="13"><title>MY LIFE — Vlog & Journal</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f8f7f3;color:#30382f;font:16px system-ui,sans-serif}header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;padding:24px 6%;border-bottom:1px solid #dedfd7}header strong{font:26px Georgia,serif;letter-spacing:3px}nav{display:flex;gap:18px;flex-wrap:wrap}a{color:#405640;text-decoration:none}nav a{font-size:12px;letter-spacing:1px}main{max-width:1050px;margin:auto;padding:30px 5% 60px}h1,h2,h3{font-family:Georgia,serif;font-weight:400}h1{font-size:clamp(36px,7vw,64px);line-height:1.12}p{line-height:1.8}small{color:#687465;letter-spacing:1px}.hero{text-align:center;padding:48px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.panel{padding:24px;background:#fffefa;border:1px solid #dedfd7;border-radius:10px}.green{background:#e2e9df}.sand{background:#eee8dc}button,.btn{display:inline-block;border:0;border-radius:5px;background:#405640;color:white;padding:12px 18px;font:inherit;cursor:pointer}label{display:block;margin:18px 0 6px}input,textarea,select{width:100%;padding:12px;border:1px solid #cdd4cb;background:#fffefa;border-radius:5px;font:inherit;color:inherit}textarea{resize:vertical}footer{text-align:center;padding:28px;background:#e9ece4}section[hidden]{display:none}article{margin:16px 0}article p{white-space:pre-wrap;overflow-wrap:anywhere}.actions{display:flex;gap:8px;flex-wrap:wrap}.cover{aspect-ratio:16/10;display:grid;place-items:center;background:#dce4d7;border-radius:7px;font-size:32px}.notice{font-size:13px;color:#655b42;background:#f1ebdc;padding:14px;border-radius:6px}button.secondary{background:#e2e9df;color:#30382f}button:focus-visible,a:focus-visible{outline:3px solid #78946f;outline-offset:3px}
 [hidden]{display:none!important}#video-upload,#video-login{margin:16px 0}#videos article{min-width:0}#videos video{background:#101510;border-radius:5px}
 #videos .vlog-photo{display:block;width:100%;height:auto;max-height:440px;object-fit:contain;border-radius:6px;background:#e9ece4;margin-top:12px}
@@ -20,7 +20,8 @@ header{position:relative;z-index:21;flex-wrap:nowrap;gap:8px;padding:12px 5%;bac
 #site-menu.is-open{display:flex}#site-menu a{display:block;padding:14px 10px;min-height:44px;font-size:13px;border-bottom:1px solid #e7e8df;letter-spacing:1px}#site-menu a:last-child{border-bottom:0}#site-menu a[aria-current="page"]{background:#e2e9df;border-radius:5px;text-decoration:none}
 #site-menu-backdrop:not([hidden]){display:block;position:fixed;inset:0;z-index:20;background:#30382f38}
 }
-</style></head><body><header><div class="site-brand"><a href="#home" aria-label="MY LIFE ホームへ戻る"><strong>MY LIFE.</strong></a><time id="site-today" class="site-date" aria-label="今日の日付"></time></div><button type="button" id="site-menu-toggle" aria-controls="site-menu" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="menu-lines" d="M4 6h16M4 12h16M4 18h16"/><path class="menu-close" d="M6 6l12 12M18 6L6 18"/></svg></button><nav id="site-menu" aria-label="メインメニュー"><a href="#home">HOME</a><a href="#timeline">TIMELINE</a><a href="#vlogs">VLOGS</a><a href="#journal">JOURNAL</a><a href="#training">TRAINING</a><a href="#about">ABOUT</a><a href="#contact">CONTACT</a></nav></header><div id="site-menu-backdrop" hidden></div><main>
+.site-update-menu{display:flex;align-items:center;gap:6px;white-space:nowrap}.site-update-menu button{font-size:11px;padding:7px 9px}.site-update-menu small{font-size:10px;letter-spacing:0}.site-update-notice{max-width:1050px;margin:14px auto 0;padding:15px 18px;border:1px solid #cdd4cb;border-radius:9px;background:#e2e9df;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.site-update-notice p{margin:4px 0 0;font-size:13px}.site-update-notice button{font-size:13px;padding:10px 13px}.site-update-notice .secondary{background:#fffefa}#site-update-status{max-width:1050px;margin:12px auto;padding:0 5%;font-size:13px;color:#687465}#site-footer-version{letter-spacing:0;font-size:11px}@media(max-width:640px){#site-menu .site-update-menu{justify-content:space-between;border-top:1px solid #dedfd7;padding:12px 10px}#site-menu .site-update-menu button{font-size:13px;min-height:44px}#site-menu .site-update-menu small{font-size:12px}.site-update-notice{margin:10px 5% 0;padding:12px}.site-update-notice .actions{width:100%}.site-update-notice button{min-height:44px}}
+</style></head><body><header><div class="site-brand"><a href="#home" aria-label="MY LIFE ホームへ戻る"><strong>MY LIFE.</strong></a><time id="site-today" class="site-date" aria-label="今日の日付"></time></div><button type="button" id="site-menu-toggle" aria-controls="site-menu" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="menu-lines" d="M4 6h16M4 12h16M4 18h16"/><path class="menu-close" d="M6 6l12 12M18 6L6 18"/></svg></button><nav id="site-menu" aria-label="メインメニュー"><a href="#home">HOME</a><a href="#timeline">TIMELINE</a><a href="#vlogs">VLOGS</a><a href="#journal">JOURNAL</a><a href="#training">TRAINING</a><a href="#about">ABOUT</a><a href="#contact">CONTACT</a><div class="site-update-menu"><button id="site-update-check" type="button" class="secondary">更新を確認</button><small id="site-menu-version">v13</small></div></nav></header><div id="site-menu-backdrop" hidden></div><aside id="site-update-notice" class="site-update-notice" hidden aria-label="アプリの更新"><div><strong id="site-update-title">新しいバージョンがあります</strong><p id="site-update-detail"></p></div><div class="actions"><button type="button" id="site-update-apply">最新版に更新する</button><button type="button" id="site-update-later" class="secondary">あとで</button></div></aside><p id="site-update-status" role="status" aria-live="polite" hidden></p><main>
 <section id="home"><div class="hero"><small>A PERSONAL LIFE ARCHIVE</small><h1>Life, one moment<br>at a time.</h1><p>映像と文章で、日々の自分を記録する。</p></div><div class="grid"><div class="panel green"><small>01 / VIDEO DIARY</small><h2>Vlogs</h2><p>日常・旅行・趣味を動画や写真で残す。</p><a class="btn" href="#vlogs">動画・写真を見る →</a></div><div class="panel sand"><small>02 / PERSONAL JOURNAL</small><h2>My Journal</h2><p>今日の出来事や気持ち、考えを残す。</p><a class="btn" href="#journal">日記を書く →</a></div><div class="panel"><small>03 / FITNESS LOG</small><h2>Training</h2><p>筋トレの重量・回数と成長を記録する。</p><a class="btn" href="#training">トレーニングを記録 →</a></div></div></section>
 <section id="timeline" hidden>
 <small>COMMUNITY / PUBLIC POSTS</small><h1>Timeline</h1><p>みんなの日常や思い出を、新しい投稿から順番に。</p>
@@ -58,7 +59,7 @@ header{position:relative;z-index:21;flex-wrap:nowrap;gap:8px;padding:12px 5%;bac
 <div class="tr-stats"><div class="panel"><small>トレーニング日数</small><strong id="tr-days">—</strong><small>日</small></div><div class="panel"><small>合計セット</small><strong id="tr-sets-total">—</strong><small>セット</small></div><div class="panel"><small>総負荷量</small><strong id="tr-volume">—</strong><small>kg（重量×回数×セット）</small></div></div>
 <h3>種目別の最高重量（表示期間）</h3><div id="tr-graph" class="panel"></div><div id="tr-list"></div><button id="tr-export" type="button" class="secondary" hidden>表示期間の記録をバックアップ</button></div>
 </section>
-<section id="about" hidden><h1>About me</h1><p>プロフィール掲載スペース</p></section><section id="contact" hidden><h1>Contact</h1><p>SNS・お問い合わせ先の掲載スペース</p></section></main><nav id="mobile-nav" aria-label="スマートフォン用メニュー"><a href="#home"><span aria-hidden="true">⌂</span>ホーム</a><a href="#timeline"><span aria-hidden="true">▤</span>タイムライン</a><a href="#vlogs"><span aria-hidden="true">▷</span>写真・動画</a><a href="#journal"><span aria-hidden="true">▣</span>日記</a><a href="#training"><span aria-hidden="true">＋</span>筋トレ</a></nav><footer><small>MY LIFE — VLOG & JOURNAL</small></footer><script>
+<section id="about" hidden><h1>About me</h1><p>プロフィール掲載スペース</p></section><section id="contact" hidden><h1>Contact</h1><p>SNS・お問い合わせ先の掲載スペース</p></section></main><nav id="mobile-nav" aria-label="スマートフォン用メニュー"><a href="#home"><span aria-hidden="true">⌂</span>ホーム</a><a href="#timeline"><span aria-hidden="true">▤</span>タイムライン</a><a href="#vlogs"><span aria-hidden="true">▷</span>写真・動画</a><a href="#journal"><span aria-hidden="true">▣</span>日記</a><a href="#training"><span aria-hidden="true">＋</span>筋トレ</a></nav><footer><small>MY LIFE — VLOG & JOURNAL</small><br><small id="site-footer-version">Version 13</small></footer><script>
 function route(){let page=location.hash.slice(1);if(!['home','timeline','vlogs','journal','training','about','contact'].includes(page))page='home';document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!==page);document.querySelectorAll('header nav a,#mobile-nav a').forEach(a=>{if(a.getAttribute('href')==='#'+page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});}
 function updateSiteDate(){
  const now=new Date();
@@ -84,4 +85,53 @@ window.addEventListener('pageshow',updateSiteDate);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateSiteDate()});
 setInterval(updateSiteDate,60000);
 window.addEventListener('hashchange',route);route();
+// Release convention: increment meta[name="my-life-version"] whenever publishing changes;
+// version script URLs by their content hash. No offline cache of authenticated data.
+(()=>{
+ const version=Number(document.querySelector('meta[name="my-life-version"]').content);
+ const button=document.getElementById('site-update-check'), notice=document.getElementById('site-update-notice'), detail=document.getElementById('site-update-detail'), title=document.getElementById('site-update-title'), apply=document.getElementById('site-update-apply'), later=document.getElementById('site-update-later'), status=document.getElementById('site-update-status');
+ let latest=version,dismissed=0,checking=null,lastCheck=0,statusTimer;
+ document.getElementById('site-menu-version').textContent='v'+version;
+ document.getElementById('site-footer-version').textContent='Version '+version;
+ function showStatus(text){clearTimeout(statusTimer);status.textContent=text;status.hidden=false;statusTimer=setTimeout(()=>{status.hidden=true},12000)}
+ function showUpdate(){title.textContent='新しいバージョンがあります';detail.textContent='MY LIFE v'+version+' → v'+latest+'。入力中の内容を保存してから更新してください。';apply.textContent='最新版に更新する';notice.hidden=false}
+ async function check(manual=false){
+  if(manual){setSiteMenu(false,true);showStatus('最新版を確認中…')}
+  if(!checking){
+   if(!manual&&Date.now()-lastCheck<30000)return;
+   lastCheck=Date.now();
+   checking=(async()=>{
+    const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),12000);
+    try{
+     const url=new URL('./index.html',location.href);url.searchParams.set('_update_check',String(Date.now()));
+     const response=await fetch(url.href,{cache:'no-store',credentials:'omit',signal:controller.signal});
+     if(!response.ok)throw Error('HTTP '+response.status);
+     const doc=new DOMParser().parseFromString(await response.text(),'text/html');
+     const raw=doc.querySelector('meta[name="my-life-version"]')?.content;
+     if(!raw||!/^\d+$/.test(raw))throw Error('バージョンを確認できません');
+     return Number(raw);
+    }finally{clearTimeout(timer)}
+   })();
+  }
+  const current=checking;button.disabled=true;
+  try{
+   const found=await current;latest=Math.max(version,found);
+   if(latest>version){if(manual||latest>dismissed)showUpdate();if(manual)status.hidden=true}
+   else if(manual){title.textContent='最新版を利用しています';detail.textContent='MY LIFE v'+version+'。必要な場合は再読み込みできます。';apply.textContent='再読み込み';notice.hidden=false;status.hidden=true}
+  }catch(e){if(manual)showStatus('更新を確認できませんでした。通信状況を確認して、もう一度お試しください。')}
+  finally{if(checking===current){checking=null;button.disabled=false}}
+ }
+ button.addEventListener('click',()=>check(true));
+ later.addEventListener('click',()=>{dismissed=latest;notice.hidden=true});
+ apply.addEventListener('click',()=>{
+  if(!confirm('入力中・アップロード中の内容は失われる場合があります。保存・投稿を完了してから更新してください。今すぐ更新しますか？'))return;
+  const url=new URL(location.href);url.searchParams.set('v',String(latest));url.searchParams.set('_reload',String(Date.now()));location.replace(url.href);
+ });
+ window.addEventListener('pageshow',()=>check());
+ window.addEventListener('focus',()=>{if(!document.hidden)check()});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)check()});
+ setInterval(()=>{if(!document.hidden)check()},300000);
+ check();
+})();
+
 </script><script src="vlog-config.js?v=3f9255d1c315"></script><script src="site-auth.js?v=a81bdce51d34"></script><script src="vlog.js?v=cdc33d677a22"></script><script src="journal.js?v=70f5f1fa1d7c"></script><script src="timeline.js?v=8e9be6722296"></script><script src="training.js?v=e84959cb0852"></script></body></html>
