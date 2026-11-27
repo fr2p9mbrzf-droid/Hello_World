@@ -26,7 +26,7 @@ function parseReceipt(text){
  return {amount:totals.length===1?totals[0]:null,date:dates.size===1?[...dates][0]:'',shop,ambiguousTotal:totals.length>1,ambiguousDate:dates.size>1};
 }
 function stop(){generation++;clearTimeout(timer);timer=null;if(frame){frame.remove();frame=null}rawImage=null;ready=false;scanning=false;$('rc-progress').hidden=true;$('rc-cancel').hidden=true;}
-function clear(){stop();if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;$('rc-preview').removeAttribute('src');$('rc-preview').hidden=true;$('rc-results').hidden=true;$('rc-shop').value='';$('rc-date').value='';$('rc-amount').value='';$('rc-raw').textContent='';$('rc-camera').value='';$('rc-file').value='';hasResult=false;status('');}
+function clear(){stop();if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;$('rc-preview').removeAttribute('src');$('rc-preview').hidden=true;$('rc-results').hidden=true;$('rc-shop').value='';$('rc-date').value='';$('rc-amount').value='';$('rc-raw').textContent='';$('rc-category').value='';$('rc-ai-note').textContent='';$('rc-camera').value='';$('rc-file').value='';hasResult=false;status('');}
 function fail(t){stop();status(t);}
 async function normalizeImage(file){
  const url=URL.createObjectURL(file);
@@ -43,13 +43,29 @@ async function normalizeImage(file){
 async function scan(file){
  if(!file||!active())return;
  if($('bu-form-title').textContent==='記録を編集'){status('レシートから新規記録を作る場合は、先に「新規記録」を押してください。');return}
- clear();const run=++generation;
+ const useAI=$('rc-cloud').checked;clear();const run=++generation;
  if(file.size>20000000||file.size===0||(!file.type.startsWith('image/')&&!/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name))){status('20MB以下の写真を選択してください。');return}
  scanning=true;$('rc-cancel').hidden=false;$('rc-progress').hidden=false;$('rc-progress').removeAttribute('value');status('画像を準備しています…');
  timer=setTimeout(()=>{if(run===generation)fail('読み取りがタイムアウトしました。通信状況を確認し、写真を撮り直すか手入力してください。')},150000);
  try{
   const blob=await normalizeImage(file);if(run!==generation||!active())return;
   previewURL=URL.createObjectURL(blob);$('rc-preview').src=previewURL;$('rc-preview').hidden=false;
+  if(useAI){
+   if(!confirm('このレシート写真をOpenAIの画像認識サービスに送信します。個人情報やカード番号が写っていないか確認してください。送信しますか？')){fail('AI送信を中止しました。');return}
+   status('AIがレシートを分析中…');
+   const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('画像を読み込めません'));reader.readAsDataURL(blob)});
+   if(run!==generation||!active())return;
+   if(dataUrl.length>2600000)throw Error('写真が大きすぎます。トリミングして再試行してください。');
+   const result=await window.MY_LIFE_AI.call('receipt',{image:dataUrl});if(run!==generation||!active())return;
+   stop();hasResult=true;
+   $('rc-shop').value=typeof result.shop==='string'?result.shop.slice(0,100):'';
+   $('rc-date').value=typeof result.date==='string'?result.date:'';
+   $('rc-amount').value=Number.isInteger(result.amount)&&result.amount>0&&result.amount<=1000000000?result.amount:'';
+   $('rc-category').value=window.MY_LIFE_AI.categories.includes(result.category)?result.category:'';
+   $('rc-ai-note').textContent=typeof result.note==='string'?result.note.slice(0,500):'';
+   $('rc-raw').textContent='画像AIによる抽出（OCR全文なし）';$('rc-results').hidden=false;
+   status('AIの読み取り候補です。写真と照らし合わせ、金額・日付・カテゴリを確認してください。');return;
+  }
   rawImage=await blob.arrayBuffer();if(run!==generation||!active())return;
   frame=document.createElement('iframe');frame.hidden=true;frame.setAttribute('sandbox','allow-scripts');frame.setAttribute('title','レシート文字認識');frame.src=new URL('receipt-ocr.html?v=16',location.href).href;document.body.append(frame);
   status('日本語OCRを準備中… 初回は認識用データのダウンロードが必要です。');
@@ -66,7 +82,7 @@ window.addEventListener('message',e=>{
  if(m.kind==='error'){fail('読み取れませんでした。手入力もできます。 '+String(m.message||'').slice(0,200));return}
  if(m.kind==='result'){
   const text=String(m.text||'').slice(0,30000),p=parseReceipt(text);stop();hasResult=true;
-  $('rc-shop').value=p.shop;$('rc-date').value=p.date;$('rc-amount').value=p.amount??'';$('rc-raw').textContent=text;$('rc-results').hidden=false;
+  $('rc-shop').value=p.shop;$('rc-date').value=p.date;$('rc-amount').value=p.amount??'';$('rc-raw').textContent=text;$('rc-category').value=window.MY_LIFE_AI.classify(text);$('rc-results').hidden=false;
   status((!p.amount?(p.ambiguousTotal?'合計候補が複数あります。':'合計金額を特定できませんでした。'):'読み取りが完了しました。')+' 写真と照らし合わせ、店名・日付・金額を確認してください。'+(p.ambiguousDate?' 日付候補も複数あります。':''));
  }
 });
@@ -77,11 +93,11 @@ $('rc-apply').onclick=()=>{
  if(!Number.isInteger(n)||n<1||n>1000000000||!date||!$('rc-date').validity.valid){status('正しい合計金額と日付を入力してください。');return}
  if(($('bu-amount').value||$('bu-note').value)&&!confirm('家計簿の入力欄に読み取った金額・日付・店名を反映しますか？'))return;
  if($('bu-kind').value!=='expense'){$('bu-kind').value='expense';$('bu-kind').dispatchEvent(new Event('change'))}
- $('bu-amount').value=String(n);$('bu-date').value=date;
+ $('bu-amount').value=String(n);$('bu-date').value=date;if($('rc-category').value)$('bu-category').value=$('rc-category').value;
  if(shop){const note=$('bu-note').value.trim();$('bu-note').value=('店名：'+shop+(note?'\n'+note:'')).slice(0,1000)}
- clear();status('入力欄に反映しました。カテゴリを選び、内容を確認して「記録を保存」を押してください。');$('bu-category').focus();
+ clear();status('入力欄に反映しました。カテゴリを確認・選択し、内容を確認して「記録を保存」を押してください。');$('bu-category').focus();
 };
-form.addEventListener('reset',clear);form.addEventListener('receipt-clear',clear);
-window.addEventListener('hashchange',()=>{if(!active())clear()});
-new MutationObserver(()=>{if(form.hidden)clear()}).observe(form,{attributes:true,attributeFilter:['hidden']});
+form.addEventListener('reset',()=>{clear();$('rc-cloud').checked=false});form.addEventListener('receipt-clear',()=>{clear();$('rc-cloud').checked=false});
+window.addEventListener('hashchange',()=>{if(!active()){clear();$('rc-cloud').checked=false}});
+new MutationObserver(()=>{if(form.hidden){clear();$('rc-cloud').checked=false}}).observe(form,{attributes:true,attributeFilter:['hidden']});
 })();
