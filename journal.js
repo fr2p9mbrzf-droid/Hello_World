@@ -7,7 +7,7 @@ const fields=['entry_date','mood','title','body','good','learn','tomorrow'];
 let client,user=null,member=null,admin=false,selected=null,editing=null,syncGen=0,roomGen=0,busy=false,rows=[];
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 function reset(){editing=null;$('j-entry').reset();$('j-entry_date').value=today();$('j-form-title').textContent='新しい日記';}
-function clear(){roomGen++;rows=[];selected=null;member=null;admin=false;editing=null;reset();$('j-archive').replaceChildren();$('j-rooms').replaceChildren();$('j-room-title').textContent='日記の部屋';$('j-account').textContent='';$('j-request').hidden=true;$('j-entry').hidden=true;$('j-admin').hidden=true;$('j-members').replaceChildren();$('j-rename').hidden=true;$('j-import').hidden=true;$('j-logout').hidden=true;$('j-login').hidden=false;$('j-signup').hidden=true;$('j-signup').reset();$('j-login').reset();$('j-search').value='';}
+function clear(){roomGen++;rows=[];selected=null;member=null;admin=false;editing=null;reset();$('j-archive').replaceChildren();$('j-rooms').replaceChildren();$('j-room-title').textContent='日記の部屋';$('j-account').textContent='';$('j-request').hidden=true;$('j-entry').hidden=true;$('j-admin').hidden=true;$('j-members').replaceChildren();$('j-rename').hidden=true;$('j-import').hidden=true;$('j-export').hidden=true;$('j-logout').hidden=true;$('j-login').hidden=false;$('j-signup').hidden=true;$('j-signup').reset();$('j-login').reset();$('j-search').value='';}
 const statusName=s=>({pending:'承認待ち',approved:'承認済み',rejected:'未承認',revoked:'承認取り消し'})[s]||s;
 const button=(text,fn,secondary=true)=>{const b=el('button',text);b.type='button';if(secondary)b.className='secondary';b.onclick=fn;return b};
 const busySet=v=>{busy=v;$('j-entry').querySelectorAll('input,textarea,select,button').forEach(e=>e.disabled=v);$('j-logout').disabled=v;$('j-import').disabled=v};
@@ -53,7 +53,7 @@ async function choose(room,clearForm=true){
  selected=room;const gen=++roomGen;
  if(clearForm){reset();$('j-search').value=''}
  $('j-room-title').textContent=room.display_name+'の日記';
- $('j-entry').hidden=!(user?.id===room.user_id&&member?.status==='approved');
+ $('j-entry').hidden=!(user?.id===room.user_id&&member?.status==='approved');$('j-export').hidden=user?.id!==room.user_id;
  $('j-rooms').querySelectorAll('button').forEach(b=>b.classList.toggle('j-selected',b.textContent===room.display_name+'の日記'+(room.user_id===user?.id?'（自分）':'')));
  rows=[];$('j-archive').replaceChildren(el('p','読み込み中…'));
  const {data,error}=await client.from('journal_entries').select('id,owner_id,entry_date,mood,title,body,good,learn,tomorrow,published,created_at').eq('owner_id',room.user_id).order('entry_date',{ascending:false}).order('created_at',{ascending:false});
@@ -100,7 +100,7 @@ handler('j-signup',async()=>{const name=$('j-signup-name').value.trim(),email=$(
 });
 handler('j-request',async()=>{const r=await client.rpc('journal_request',{p_name:$('j-request-name').value.trim()});if(r.error)throw r.error;say('参加申請を送信しました。管理者の承認をお待ちください。');await sync()});
 handler('j-rename',async()=>{const r=await client.rpc('journal_rename',{p_name:$('j-new-name').value.trim()});if(r.error)throw r.error;say('部屋の名前を変更しました。');await sync()});
-$('j-refresh').onclick=()=>sync().then(()=>say('最新の状態を取得しました。')).catch(e=>say(e.message));
+$('j-refresh').onclick=()=>{say('状態を確認中…');sync().then(()=>{if($('j-status').textContent==='状態を確認中…')say('最新の状態を取得しました。')}).catch(e=>say(e.message))};
 $('j-logout').onclick=async()=>{if(busy)return;try{const r=await client.auth.signOut();if(r.error)throw r.error;clear();user=null;say('ログアウトしました。');await sync()}catch(e){say(e.message)}};
 $('j-search').oninput=draw;$('j-cancel').onclick=reset;
 handler('j-entry',async()=>{if(busy||!user||member?.status!=='approved'||selected?.user_id!==user.id)return;
